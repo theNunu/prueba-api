@@ -7,6 +7,7 @@ use App\Http\Controllers\RoleController;
 use Illuminate\Container\Attributes\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AdminController;
 
 // Route::post('register', [AuthController::class, 'register']);
 // Route::post('login', [AuthController::class, 'login']);
@@ -40,3 +41,5 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::post('rol', [RoleController::class, 'registerRole']); // Crear un nuevo rol
+
+Route::middleware(['auth:sanctum'])->get('/admin/user-sessions/{userId}', [AdminController::class, 'viewUserSessions']);
