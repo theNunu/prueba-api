@@ -51,19 +51,80 @@ class AuthController extends Controller
 
     public function login(request $request)
     {
-        $credentials = $request->validate(([
-            'email' => ['required', 'email'],
-            'password' => ['required']
-        ]));
+         // Validación de credenciales
+    // $credentials = $request->validate([
+    //     'email' => ['required', 'email'],
+    //     'password' => ['required']
+    // ]);
 
-        if (FacadesAuth::attempt($credentials)) {
-            $user = FacadesAuth::user();
-            $token = $user->createToken('token')->plainTextToken;
-            $cookie = cookie('cookie_token', $token, 60 * 24);
-            return response(["token" => $token], HttpFoundationResponse::HTTP_OK)->withoutCookie($cookie);
-        } else {
-            return response(["message" => "Credenciales no válidas"], HttpFoundationResponse::HTTP_UNAUTHORIZED);
+    // // Busca al usuario por su correo
+    // $user = User::where('email', $credentials['email'])->first();
+
+    // // Verifica si el usuario está bloqueado
+    // if ($user && $user->is_blocked) {
+    //     return response()->json(['message' => 'Tu cuenta está bloqueada debido a intentos de inicio de sesión fallidos.'], HttpFoundationResponse::HTTP_FORBIDDEN);
+    // }
+
+    // // Intenta autenticar al usuario
+    // if (FacadesAuth::attempt($credentials)) {
+    //     // Reiniciar los intentos de inicio de sesión
+    //     $user->login_attempts = 0;
+    //     $user->is_blocked = false; // Asegurarse de que no esté bloqueado
+    //     $user->save();
+
+    //     $token = $user->createToken('token')->plainTextToken;
+    //     return response()->json(["token" => $token], HttpFoundationResponse::HTTP_OK);
+    // } else {
+    //     // Incrementa el contador de intentos de inicio de sesión
+    //     if ($user) {
+    //         $user->login_attempts++;
+    //         if ($user->login_attempts >= 3) {
+    //             $user->is_blocked = true; // Bloquear al usuario
+    //         }
+    //         $user->save();
+    //     }
+
+    //     return response()->json(["message" => "Credenciales no válidas"], HttpFoundationResponse::HTTP_UNAUTHORIZED);
+    // }
+    $credentials = $request->validate([
+        'email' => ['required', 'email'],
+        'password' => ['required']
+    ]);
+
+    // Busca al usuario por su correo
+    $user = User::where('email', $credentials['email'])->first();
+
+    // Verifica si el usuario está bloqueado
+    if ($user && $user->is_blocked) {
+        return response()->json(['message' => 'Tu cuenta está bloqueada debido a intentos de inicio de sesión fallidos.'], HttpFoundationResponse::HTTP_FORBIDDEN);
+    }
+
+    // Intenta autenticar al usuario
+    if (FacadesAuth::attempt($credentials)) {
+        // Reiniciar los intentos de inicio de sesión
+        $user->login_attempts = 0;
+        $user->is_blocked = false; // Asegurarse de que no esté bloqueado
+        $user->save();
+
+        // Elimina cualquier token anterior para forzar una única sesión activa
+        $user->tokens()->delete();
+
+        // Crea un nuevo token para la sesión actual
+        $token = $user->createToken('token')->plainTextToken;
+
+        return response()->json(["token" => $token], HttpFoundationResponse::HTTP_OK);
+    } else {
+        // Incrementa el contador de intentos de inicio de sesión
+        if ($user) {
+            $user->login_attempts++;
+            if ($user->login_attempts >= 3) {
+                $user->is_blocked = true; // Bloquear al usuario
+            }
+            $user->save();
         }
+
+        return response()->json(["message" => "Credenciales no válidas"], HttpFoundationResponse::HTTP_UNAUTHORIZED);
+    }
     }
     public function userProfile(Request $request)
     {
